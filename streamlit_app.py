@@ -19,96 +19,56 @@ In the meantime, below is an example of what you can do with just a few lines of
 
 
 with st.echo(code_location='below'):
-    if 'total_value' not in st.session_state:
-        st.session_state['total_value'] = 100
-    if 'home' not in st.session_state:
-        st.session_state['home'] = 0
-    if 'food' not in st.session_state:
-        st.session_state['food'] = 0
-    if 'entertainment' not in st.session_state:
-        st.session_state['entertainment'] = 0
-    if 'transportation' not in st.session_state:
-        st.session_state['transportation'] = 0
-    if 'other' not in st.session_state:
-        st.session_state['other'] = 0
 
-    def update_state(key, value):
-        inc = value > st.session_state[key]
-        if not inc and value > st.session_state['total_value']:
-            return
-        st.session_state[key] = value
-        if inc:
-            st.session_state['total_value'] -= value
-        else:
-            st.session_state['total_value'] += value
-    
-    step = 1
-    home = st.slider(
-        "Select what percentage of your budget you'd like to spend on housing", 
-        min_value=-1, 
-        max_value=100, 
-        step=step,
-        value=st.session_state['home'])
-    update_state('home', home),
-    # total_value -= home
-    food = st.slider(
-        "Select what percentage of your budget you'd like to spend on food", 
-        min_value=-1, 
-        max_value=100, 
-        value=st.session_state['food'],
-        step=step)
-    update_state('food', food)
-    # total_value -= food
-    entertainment = st.slider(
-        "Select what percentage of your budget you'd like to spend on entertainment", 
-        min_value=-1, 
-        max_value=100,
-        value=st.session_state['entertainment'],
-        step=step)
-    update_state('entertainment', entertainment)
-    # total_value -= entertainment
-    transportation = st.slider(
-        "Select what percentage of your budget you'd like to spend on transportation", 
-        min_value=-1, 
-        max_value=100, 
-        value=st.session_state['transportation'],
-        step=step)
-    update_state('transportation', transportation)
-    # total_value -= transportation
-    other = st.slider(
-        "Select what percentage of your budget you'd like to spend on other", 
-        min_value=-1, 
-        max_value=100,
-        value=st.session_state['other'],
-        step=1)
-    update_state('other', other),
-    # total_value -= other
-    # savings = total_value
+    st.title('Budgeting App')
+    st.write('This app will help you budget your money')
+    st.write('Please enter your monthly income')
+    st.write('Year in Review')
+    st.write('Income')
+    last_year_income = st.number_input('Enter what you earned last year income', min_value=0.0, value=0.0, step=100.0)
 
-    labels = 'Housing', 'Food', 'Entertainment', 'Transportation', 'Other'
-    sizes = [home, food, entertainment, transportation, other + st.session_state['total_value']]
-    fig1, ax = plt.subplots()
-    ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')
-    st.pyplot(fig1)
+    st.write('Expenses')
+    st.write('Upload your expenses over the last year')
+    # uploaded_file = st.file_uploader("Choose a file")
+    uploaded_file = pd.read_csv('last_year_trends_raw.csv')
+    df = pd.DataFrame(uploaded_file)
+
+    if last_year_income != 0.0:
+        def get_perc(last_year_income):
+            return lambda x: float(''.join(c for c in x[1] if (c.isdigit() or c =='.')))/ float(last_year_income)
+        def format_perc(x):
+            return "{:.2%}".format(x)
+        percentage_column_num = list(map(get_perc(last_year_income), df.values.tolist()))
+        percentage_column_str = list(map(format_perc, percentage_column_num))
+        df.insert(2, 'Percentage', percentage_column_str)
+        # st.write(df.values.tolist())
+        st.write(df)
+
+        labels = df['CATEGORY'].values.tolist()[:-1]
+        sizes = percentage_column_num[:-1]
+        fig1, ax = plt.subplots()
+        ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig1)
+    st.write('Let\'s plan for the future)')
+    potential_income = st.number_input('Enter your monthly potential income', min_value=0.0, value=0.0, step=100.0)
+    potential_annual_income = potential_income * 12
+
+    st.write('Expenses')
+    st.write('What would you like to spend on each category?')
+
+    formatted_df_expenses_input = list(map(lambda x: { 'Category': x, 'Percentage': 0 }, df['CATEGORY'].values.tolist()[:-1]))
+    df_expenses = pd.DataFrame(
+        formatted_df_expenses_input
+    )
+    st.write(list(map(lambda x: float(x), df_expenses['Percentage'].values.tolist())))
+    amount_left = 100 - sum(list(map(lambda x: float(x), df_expenses['Percentage'].values.tolist())))
+    st.write(amount_left)
+
+    df_expenses_with_percentages = st.experimental_data_editor(df_expenses)
+    st.write('Based on your projected income, here is what you should spend on each category')
+
+    formatted_df_budget = list(map(lambda x: { 'Category': x[0], 'Amount': 0.01 * float(x[1]) * potential_annual_income, 'Monthly': 0.01 * float(x[1]) * potential_annual_income / 12 }, df_expenses_with_percentages.values.tolist()))
+    st.write(pd.DataFrame(formatted_df_budget))
 
 
-    # total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    # num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
-
-    # Point = namedtuple('Point', 'x y')
-    # data = []
-
-    # points_per_turn = total_points / num_turns
-
-    # for curr_point_num in range(total_points):
-    #     curr_turn, i = divmod(curr_point_num, points_per_turn)
-    #     angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-    #     radius = curr_point_num / total_points
-    #     x = radius * math.cos(angle)
-    #     y = radius * math.sin(angle)
-    #     data.append(Point(x, y))
-
-    # st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-    #     .mark_circle(color='#0068c9', opacity=0.5)
-    #     .encode(x='x:Q', y='y:Q'))
